@@ -103,7 +103,7 @@ fn glyph(c: char) -> [u8; 8] {
     }
 }
 
-/// A write-able 132x64 frame containing a buffer of monochrom pixels.
+/// A write-able 132x64 frame containing a buffer of monochrome pixels.
 pub struct Frame {
     buffer: [u8; WIDTH * HEIGHT],
 }
