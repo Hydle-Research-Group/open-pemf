@@ -51,6 +51,26 @@ impl SessionState {
     pub fn set_session_remaining_time(&mut self, time: u16) {
         self.session_remaining_time = time;
     }
+
+    /// Returns if the session is on (`true` if on, else `false`).
+    pub fn session_on(&self) -> bool {
+        self.session_on
+    }
+
+    /// Returns if the session is sleeping (`true` if sleeping, else `false`).
+    pub fn session_sleeping(&self) -> bool {
+        self.session_sleeping
+    }
+
+    /// Returns the session level (1-10)
+    pub fn session_level(&self) -> u8 {
+        self.session_level
+    }
+
+    /// Returns the session's remaining time (in seconds)
+    pub fn session_remaining_time(&self) -> u16 {
+        self.session_remaining_time
+    }
 }
 
 /// The UI state of the firmware.
