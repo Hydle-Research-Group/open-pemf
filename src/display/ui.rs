@@ -1,7 +1,8 @@
 /// The active (current) screen to display.
 pub enum ActiveScreen {
-    SessionConfig { ui: SessionConfigUI },
-    Session { ui: SessionUI },
+    SessionConfig,
+    Session,
+    Error,
 }
 
 /// A screen's UI.
@@ -12,7 +13,7 @@ pub enum ActiveScreen {
 /// - `knob_up`: a single turn of the control knob left or "up"
 /// - `knob_down`: a single turn of the control knob right or "down"
 /// - `element_count`: the number of elements in the ui
-pub trait ScreenUI {
+pub trait Screen {
     /// The control knob was clicked.
     fn click(&mut self);
 
@@ -39,7 +40,7 @@ pub struct SessionConfigUI {
     started: bool,
 }
 
-impl ScreenUI for SessionConfigUI {
+impl Screen for SessionConfigUI {
     fn click(&mut self) {
         if self.controlling_duration {
             self.controlling_duration = false;
@@ -141,7 +142,7 @@ pub struct SessionUI {
     sleep_mode: bool,
 }
 
-impl ScreenUI for SessionUI {
+impl Screen for SessionUI {
     fn click(&mut self) {
         if self.sleep_mode {
             self.sleep_mode = false; // wake screen up

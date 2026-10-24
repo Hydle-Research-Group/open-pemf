@@ -1,4 +1,4 @@
-use crate::display::{ActiveScreen, Frame, ScreenUI, SessionConfigUI, SessionUI};
+use crate::display::{ActiveScreen, Frame, Screen, SessionConfigUI, SessionUI};
 
 /// The session state of the firmware.
 ///
@@ -80,15 +80,19 @@ impl SessionState {
 /// on actions sent from the UI.
 pub struct UIState {
     active_screen: ActiveScreen,
+    session_config_ui: SessionConfigUI,
+    session_ui: SessionUI,
+    error: &'static str,
 }
 
 impl UIState {
     /// Constructs a new `UIState`.
     pub const fn new() -> Self {
         Self {
-            active_screen: ActiveScreen::SessionConfig {
-                ui: SessionConfigUI::new(),
-            },
+            active_screen: ActiveScreen::SessionConfig,
+            session_config_ui: SessionConfigUI::new(),
+            session_ui: SessionUI::new(),
+            error: "",
         }
     }
 
@@ -97,18 +101,21 @@ impl UIState {
     /// - `session_state`: a global `SessionState` to modify depending on click events.
     pub fn clicked(&mut self, session_state: &mut SessionState) {
         match self.active_screen {
-            ActiveScreen::Session { ref mut ui } => {
-                ui.click();
+            ActiveScreen::Session => {
+                self.session_ui.click();
 
-                session_state.set_session_on(ui.stopped());
-                session_state.set_session_sleeping(ui.sleep_mode());
+                session_state.set_session_on(self.session_ui.stopped());
+                session_state.set_session_sleeping(self.session_ui.sleep_mode());
             }
-            ActiveScreen::SessionConfig { ref mut ui } => {
-                ui.click();
+            ActiveScreen::SessionConfig => {
+                self.session_config_ui.click();
 
-                session_state.set_session_on(ui.started());
-                session_state.set_session_level(ui.level());
-                session_state.set_session_remaining_time(ui.duration_seconds());
+                session_state.set_session_on(self.session_config_ui.started());
+                session_state.set_session_level(self.session_config_ui.level());
+                session_state.set_session_remaining_time(self.session_config_ui.duration_seconds());
+            }
+            ActiveScreen::Error => {
+                self.active_screen = ActiveScreen::SessionConfig;
             }
         }
     }
@@ -116,16 +123,18 @@ impl UIState {
     /// A control knob up event on the UI.
     pub fn knob_up(&mut self) {
         match self.active_screen {
-            ActiveScreen::Session { ref mut ui } => ui.knob_up(),
-            ActiveScreen::SessionConfig { ref mut ui } => ui.knob_up(),
+            ActiveScreen::Session => self.session_ui.knob_up(),
+            ActiveScreen::SessionConfig => self.session_config_ui.knob_up(),
+            ActiveScreen::Error => {}
         }
     }
 
     /// A control knob down event on the UI.
     pub fn knob_down(&mut self) {
         match self.active_screen {
-            ActiveScreen::Session { ref mut ui } => ui.knob_down(),
-            ActiveScreen::SessionConfig { ref mut ui } => ui.knob_down(),
+            ActiveScreen::Session => self.session_ui.knob_down(),
+            ActiveScreen::SessionConfig => self.session_config_ui.knob_down(),
+            ActiveScreen::Error => {}
         }
     }
 
@@ -135,16 +144,37 @@ impl UIState {
     /// - `session_state`: a referenced `SessionState` to obtain session info
     pub fn draw(&self, frame: &mut Frame, session_state: &SessionState) {
         match self.active_screen {
-            ActiveScreen::Session { ref ui } => {
+            ActiveScreen::Session => {
                 // frame.draw_text("  Remaining Time: ", (0, 0));
                 // frame.draw_text("  Sleep", (0, 9));
                 // frame.draw_text("  Stop Session", (0, 18));
             }
-            ActiveScreen::SessionConfig { ref ui } => {
+            ActiveScreen::SessionConfig => {
                 // frame.draw_text("  Session Duration:", (0, 0));
                 // frame.draw_text("  Session Level:", (0, 9));
                 // frame.draw_text("  Start Session", (0, 18));
             }
+            ActiveScreen::Error => {
+                frame.draw_text(self.error, (0, 0));
+            }
         }
+    }
+
+    /// Display the session UI.
+    pub fn display_session(&mut self) {
+        self.active_screen = ActiveScreen::Session;
+    }
+
+    /// Display the session configuration UI.
+    pub fn display_session_config(&mut self) {
+        self.active_screen = ActiveScreen::SessionConfig;
+    }
+
+    /// Display the error UI.
+    ///
+    /// - `message`: the error message to display
+    pub fn display_error(&mut self, message: &'static str) {
+        self.error = message;
+        self.active_screen = ActiveScreen::Error;
     }
 }
