@@ -6,7 +6,7 @@ const GLYPH_HEIGHT: usize = 8;
 /// Character order:
 /// A-Z, 0-9, '.', ':'
 /// Each glyph is 8x8 pixels, one byte per row.
-static FONT: [[u8; 8]; 41] = [
+static FONT: [[u8; 8]; 42] = [
     // A
     [0x18, 0x24, 0x42, 0x42, 0x7E, 0x42, 0x42, 0x00],
     // B
@@ -87,6 +87,8 @@ static FONT: [[u8; 8]; 41] = [
     [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     // >
     [0x00, 0x60, 0x18, 0x06, 0x18, 0x60, 0x00, 0x00],
+    // \n (newline marker)
+    [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     // unknown character
     [0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF],
 ];
@@ -99,6 +101,7 @@ fn glyph(c: char) -> [u8; 8] {
         ':' => FONT[37],
         ' ' => FONT[38],
         '>' => FONT[39],
+        '\n' => FONT[40],
         _ => FONT[FONT.len() - 1], // unknown char
     }
 }
@@ -130,9 +133,15 @@ impl Frame {
     /// the pixels are discarded and the sequence is cut off.
     pub fn draw_text(&mut self, text: &str, position: (u8, u8)) {
         let origin_x = position.0 as usize;
-        let origin_y = position.1 as usize;
+        let mut origin_y = position.1 as usize;
+        let mut newline_count = 0;
 
         for (char_index, c) in text.chars().enumerate() {
+            if c == '\n' {
+                newline_count += 1;
+                origin_y += GLYPH_HEIGHT * newline_count // move to the next line
+            }
+
             let character = glyph(c);
             let char_x = origin_x + char_index * GLYPH_WIDTH;
 
