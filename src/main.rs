@@ -30,7 +30,8 @@ embassy_rp::bind_interrupts!(struct Irqs {
 // States
 static SESSION_STATE: Mutex<CriticalSectionRawMutex, RefCell<SessionState>> =
     Mutex::new(RefCell::new(SessionState::new()));
-static UI_STATE: UIState = UIState::new();
+static UI_STATE: Mutex<CriticalSectionRawMutex, RefCell<UIState>> =
+    Mutex::new(RefCell::new(UIState::new()));
 
 // Addresses
 const DISPLAY_ADDRESS: u16 = 0x3c;
@@ -81,13 +82,15 @@ async fn main(_spawner: Spawner) {
 #[embassy_executor::task]
 async fn session_timer() {
     loop {
-        let state = SESSION_STATE.lock().await;
-        let remaining = state.borrow().session_remaining_time();
+        let session_state = SESSION_STATE.lock().await;
+        let remaining = session_state.borrow().session_remaining_time();
 
-        if state.borrow().session_on() && remaining > 0 {
+        if session_state.borrow().session_on() && remaining > 0 {
             Timer::after_secs(1).await;
 
-            state.borrow_mut().set_session_remaining_time(remaining - 1);
+            session_state
+                .borrow_mut()
+                .set_session_remaining_time(remaining - 1);
         }
     }
 }
@@ -108,30 +111,36 @@ async fn generate_pulses(
     dir_pin.set_low();
 
     loop {
-        let state = SESSION_STATE.lock().await;
+        let session_state = SESSION_STATE.lock().await;
+        let ui_state = UI_STATE.lock().await;
 
         if coil_en_pin.is_low() {
-            todo!("Handle coil disconnection error");
+            ui_state
+                .borrow_mut()
+                .display_error("E01:\nDevice Disconnected");
+
+            continue; // skip until the treatment device is connected
         }
 
-        if state.borrow().session_on() {
+        if session_state.borrow().session_on() {
             enable_pin.set_low(); // enable the driver
+            ui_state.borrow_mut().display_session(); // display the session UI
 
             // coil current configuration
-            let current_config = tmc_ix(16, state.borrow().session_level() * 3, 16);
+            let current_config = tmc_ix(16, session_state.borrow().session_level() * 3, 16);
 
             if let Ok(()) = tmc_write_register(&mut uart, TMC2209_ADDRESS, 0x10, current_config) {
                 info!("TMC2209 current values configured");
             } else {
-                todo!("Handle tmc2209 communication error");
+                ui_state.borrow_mut().display_error("E03:\nTMC2209 UART");
             }
 
-            // single pulse
+            // single pulse, 30Hz total
             step_pin.set_high();
             Timer::after_millis(33).await;
             step_pin.set_low();
         } else {
-            enable_pin.set_high();
+            enable_pin.set_high(); // disabled
         }
     }
 }
@@ -152,15 +161,21 @@ async fn draw_ui(mut display_driver: I2c<'static, I2C0, Async>) {
 
     loop {
         frame.clear(); // clear on every pass
-        UI_STATE.draw(&mut frame, &SESSION_STATE.lock().await.borrow()); // draw the ui
 
-        if let Ok(()) = display_driver
-            .write_async(DISPLAY_ADDRESS, frame.buffer())
-            .await
-        {
-            info!("Writing to display");
-        } else {
-            todo!("Handle display writing error");
+        let session_state = SESSION_STATE.lock().await;
+        let ui_state = UI_STATE.lock().await;
+
+        if !session_state.borrow().session_sleeping() {
+            ui_state.borrow().draw(&mut frame, &session_state.borrow()); // draw the ui
+
+            if let Ok(()) = display_driver
+                .write_async(DISPLAY_ADDRESS, frame.buffer())
+                .await
+            {
+                info!("Writing to display");
+            } else {
+                ui_state.borrow_mut().display_error("E02:\nDisplay Writing");
+            }
         }
 
         Timer::after_millis(100).await; // re-draw every 100ms
