@@ -2,7 +2,7 @@
 #![no_main]
 
 use core::cell::RefCell;
-use defmt::info;
+use defmt::{error, info};
 use defmt_rtt as _;
 use embassy_executor::Spawner;
 use embassy_rp::{
@@ -119,7 +119,7 @@ async fn generate_pulses(
         if coil_en_pin.is_low() {
             ui_state
                 .borrow_mut()
-                .display_error("E01:\nDevice Disconnected");
+                .display_error("E00:\nDevice Disconnected");
 
             continue; // skip until the treatment device is connected
         }
@@ -131,10 +131,10 @@ async fn generate_pulses(
             // coil current configuration
             let current_config = tmc_ix(16, session_state.borrow().session_level() * 3, 16);
 
-            if let Ok(()) = tmc_write_register(&mut uart, TMC2209_ADDRESS, 0x10, current_config) {
-                info!("TMC2209 current values configured");
-            } else {
-                ui_state.borrow_mut().display_error("E03:\nTMC2209 UART");
+            if let Err(e) = tmc_write_register(&mut uart, TMC2209_ADDRESS, 0x10, current_config) {
+                error!("Error writing to TMC2209 UART: {}", e);
+
+                ui_state.borrow_mut().display_error("E01:\nTMC2209 UART");
             }
 
             // single pulse, 30Hz total
@@ -182,6 +182,30 @@ async fn read_control_knob_click(mut knob_press_pin: Input<'static>) {
 /// on what UI is being drawn.
 #[embassy_executor::task]
 async fn draw_ui(mut display_driver: I2c<'static, I2C0, Async>) {
+    // display initialization commands
+    let commands = [
+        0x00, // I2C control byte
+        0xAE, // Display OFF
+        0xD5, 0x80, // Clock divide ratio
+        0xA8, 0x3F, // Multiplex ratio: 1/64
+        0xD3, 0x00, // Display offset
+        0x40, // Start line: 0
+        0xAD, 0x8B, // DC-DC control (module dependent)
+        0xA1, // Segment remap
+        0xC8, // COM scan direction
+        0xDA, 0x12, // COM pin configuration
+        0x81, 0x7F, // Contrast
+        0xD9, 0xF1, // Pre-charge period
+        0xDB, 0x40, // VCOMH deselect level
+        0xA4, // Resume display from RAM
+        0xA6, // Normal display
+        0xAF, // Display ON
+    ];
+
+    if let Err(e) = display_driver.write_async(DISPLAY_ADDRESS, commands).await {
+        error!("Error initializing display: {}", e);
+    };
+
     let mut frame = Frame::new();
 
     loop {
@@ -190,17 +214,17 @@ async fn draw_ui(mut display_driver: I2c<'static, I2C0, Async>) {
         let session_state = SESSION_STATE.lock().await;
         let ui_state = UI_STATE.lock().await;
 
+        // draw the ui on to the frame if the screen is not sleeping
         if !session_state.borrow().session_sleeping() {
-            ui_state.borrow().draw(&mut frame, &session_state.borrow()); // draw the ui
+            ui_state.borrow().draw(&mut frame, &session_state.borrow());
+        }
 
-            if let Ok(()) = display_driver
-                .write_async(DISPLAY_ADDRESS, frame.buffer())
-                .await
-            {
-                info!("Writing to display");
-            } else {
-                ui_state.borrow_mut().display_error("E02:\nDisplay Writing");
-            }
+        let mut buffer = [0u8; 1025];
+        buffer[0] = 0x40;
+        buffer[1..].copy_from_slice(&frame.buffer());
+
+        if let Err(e) = display_driver.write_async(DISPLAY_ADDRESS, buffer).await {
+            error!("Error writing display bytes: {}", e);
         }
 
         Timer::after_millis(100).await; // re-draw every 100ms
