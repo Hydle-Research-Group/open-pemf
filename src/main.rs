@@ -51,7 +51,7 @@ async fn main(_spawner: Spawner) {
     let tmc2209_uart = Uart::new_blocking(p.UART1, p.PIN_20, p.PIN_21, uart_config); // blocking is ok, we only send commands to the driver occasionally
 
     // inputs
-    let coil_en_pin = Input::new(p.PIN_16, Pull::Up);
+    let coil_en_pin = Input::new(p.PIN_16, Pull::Down);
     let knob_press_pin = Input::new(p.PIN_2, Pull::Up);
 
     // outputs
