@@ -5,6 +5,7 @@ use core::cell::RefCell;
 use defmt::{error, info};
 use defmt_rtt as _;
 use embassy_executor::Spawner;
+use embassy_futures::select::select;
 use embassy_rp::{
     gpio::{self, AnyPin, Input, Pull},
     i2c::{Async, I2c, InterruptHandler},
@@ -22,6 +23,7 @@ use openpemf::{
     },
 };
 use panic_probe as _;
+use sb_rotary_encoder::{Direction, RotaryEncoder};
 
 embassy_rp::bind_interrupts!(struct Irqs {
     I2C0_IRQ => InterruptHandler<embassy_rp::peripherals::I2C0>;
@@ -53,6 +55,8 @@ async fn main(_spawner: Spawner) {
     // inputs
     let coil_en_pin = Input::new(p.PIN_16, Pull::Down);
     let knob_press_pin = Input::new(p.PIN_2, Pull::Up);
+    let knob_a_pin = Input::new(p.PIN_3, Pull::Down);
+    let knob_b_pin = Input::new(p.PIN_4, Pull::Down);
 
     // outputs
     let en_pin = Output::new(p.PIN_17.into::<AnyPin>(), Level::High);
@@ -61,6 +65,7 @@ async fn main(_spawner: Spawner) {
 
     _spawner.spawn(session_timer().unwrap());
     _spawner.spawn(generate_pulses(tmc2209_uart, coil_en_pin, en_pin, step_pin, dir_pin).unwrap());
+    _spawner.spawn(read_control_knob_rotation(knob_a_pin, knob_b_pin).unwrap());
     _spawner.spawn(read_control_knob_click(knob_press_pin).unwrap());
     _spawner.spawn(draw_ui(display_driver).unwrap());
 
@@ -147,8 +152,40 @@ async fn generate_pulses(
     }
 }
 
+/// Control knob rotation task.
+///
+/// This task waits for the control knob A/B pins to change logic levels. The output is read by a
+/// rotary encoder to then determine the direction the knob was rotated (if rotated at all).
+/// The event is then sent to `UI_STATE`'s `knob_down` (clockwise) or `knob_up` (counter-clockwise)
+/// methods.
 #[embassy_executor::task]
-async fn read_control_knob_rotation() {}
+async fn read_control_knob_rotation(
+    mut knob_a_pin: Input<'static>,
+    mut knob_b_pin: Input<'static>,
+) {
+    let mut encoder = RotaryEncoder::new();
+
+    loop {
+        select(
+            knob_a_pin.wait_for_any_edge(),
+            knob_b_pin.wait_for_any_edge(),
+        )
+        .await;
+
+        if let Some(event) = encoder.update(knob_a_pin.is_low(), knob_b_pin.is_low(), None, 4) {
+            let ui_state = UI_STATE.lock().await;
+
+            match event.direction() {
+                Direction::Clockwise => {
+                    ui_state.borrow_mut().knob_down();
+                }
+                Direction::CounterClockwise => {
+                    ui_state.borrow_mut().knob_up();
+                }
+            }
+        }
+    }
+}
 
 /// Control knob clicking task.
 ///

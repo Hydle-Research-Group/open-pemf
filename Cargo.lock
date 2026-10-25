@@ -1160,6 +1160,7 @@ dependencies = [
  "panic-probe",
  "portable-atomic",
  "rand",
+ "sb-rotary-encoder",
  "smart-leds",
  "static_cell",
 ]
@@ -1486,6 +1487,12 @@ checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
 ]
+
+[[package]]
+name = "sb-rotary-encoder"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42e8ca0f5532f70e0335143c59b82127455dfe3aa571d88a08206802bfa03938"
 
 [[package]]
 name = "scoped-tls"
