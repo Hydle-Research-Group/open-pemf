@@ -143,20 +143,60 @@ impl UIState {
     /// - `frame`: the `Frame` to draw on
     /// - `session_state`: a referenced `SessionState` to obtain session info
     pub fn draw(&self, frame: &mut Frame, session_state: &SessionState) {
-        match self.active_screen {
-            ActiveScreen::Session => {
-                // frame.draw_text("  Remaining Time: ", (0, 0));
-                // frame.draw_text("  Sleep", (0, 9));
-                // frame.draw_text("  Stop Session", (0, 18));
-            }
-            ActiveScreen::SessionConfig => {
-                // frame.draw_text("  Session Duration:", (0, 0));
-                // frame.draw_text("  Session Level:", (0, 9));
-                // frame.draw_text("  Start Session", (0, 18));
-            }
+        let mut format_buffer1 = [0u8; 64];
+        let mut format_buffer2 = [0u8; 64];
+
+        let lines = match self.active_screen {
+            ActiveScreen::Session => [
+                format_no_std::show(
+                    &mut format_buffer1,
+                    format_args!(
+                        "Remaining: {:02}:{:02}",
+                        session_state.session_remaining_time() / 60,
+                        session_state.session_remaining_time() % 60
+                    ),
+                )
+                .unwrap(),
+                "Sleep",
+                "Stop Session",
+            ],
+            ActiveScreen::SessionConfig => [
+                format_no_std::show(
+                    &mut format_buffer1,
+                    format_args!(
+                        "Session Duration: {:02}:{:02}",
+                        session_state.session_remaining_time() / 60,
+                        session_state.session_remaining_time() % 60,
+                    ),
+                )
+                .unwrap(),
+                format_no_std::show(
+                    &mut format_buffer2,
+                    format_args!("Session Level: {}", session_state.session_level()),
+                )
+                .unwrap(),
+                "Start Session",
+            ],
             ActiveScreen::Error => {
                 frame.draw_text(self.error, (0, 0));
+
+                return;
             }
+        };
+
+        let mut buf = [0u8; 64];
+
+        for (i, l) in lines.iter().enumerate() {
+            let cursor = if self.session_ui.cursor_position() as usize == i {
+                ">"
+            } else {
+                " "
+            };
+
+            frame.draw_text(
+                format_no_std::show(&mut buf, format_args!("{} {}", cursor, l)).unwrap(),
+                (0, (i * 9) as u8),
+            );
         }
     }
 
