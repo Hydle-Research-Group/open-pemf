@@ -52,6 +52,7 @@ async fn main(_spawner: Spawner) {
 
     // inputs
     let coil_en_pin = Input::new(p.PIN_16, Pull::Up);
+    let knob_press_pin = Input::new(p.PIN_2, Pull::Up);
 
     // outputs
     let en_pin = Output::new(p.PIN_17.into::<AnyPin>(), Level::High);
@@ -60,6 +61,7 @@ async fn main(_spawner: Spawner) {
 
     _spawner.spawn(session_timer().unwrap());
     _spawner.spawn(generate_pulses(tmc2209_uart, coil_en_pin, en_pin, step_pin, dir_pin).unwrap());
+    _spawner.spawn(read_control_knob_click(knob_press_pin).unwrap());
     _spawner.spawn(draw_ui(display_driver).unwrap());
 
     let mut led = Output::new(p.PIN_25, Level::Low);
@@ -148,8 +150,31 @@ async fn generate_pulses(
 #[embassy_executor::task]
 async fn read_control_knob_rotation() {}
 
+/// Control knob clicking task.
+///
+/// This task waits for the control knob to be pressed, then calls the `UI_STATE`'s `clicked` method,
+/// sending a click event to the UI.
 #[embassy_executor::task]
-async fn read_control_knob_click() {}
+async fn read_control_knob_click(mut knob_press_pin: Input<'static>) {
+    loop {
+        // sleep until button press
+        knob_press_pin.wait_for_falling_edge().await;
+
+        Timer::after_millis(30).await;
+
+        if knob_press_pin.is_low() {
+            let session_state = SESSION_STATE.lock().await;
+            let ui_state = UI_STATE.lock().await;
+
+            ui_state
+                .borrow_mut()
+                .clicked(&mut session_state.borrow_mut());
+
+            knob_press_pin.wait_for_high().await;
+            Timer::after_millis(30).await;
+        }
+    }
+}
 
 /// UI drawing task for the 1.3" OLED display.
 ///
