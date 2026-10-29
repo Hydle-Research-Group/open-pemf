@@ -256,7 +256,7 @@ async fn draw_ui(mut display_driver: I2c<'static, I2C0, Async>) {
             ui_state.borrow().draw(&mut frame, &session_state.borrow());
         }
 
-        let mut buffer = [0u8; 1025];
+        let mut buffer = [0u8; 8449];
         buffer[0] = 0x40;
         buffer[1..].copy_from_slice(&frame.buffer());
 
