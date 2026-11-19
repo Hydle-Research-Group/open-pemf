@@ -1,13 +1,20 @@
+from machine import Pin
+
+
 class SessionState:
     """
-    Session state.
+    The session state.
     """
 
-    def __init__(
-        self,
-    ):
+    def __init__(self, device_connected_pin: Pin):
+        """
+        Construct a new `SessionState` object.
+
+        - `device_connected_pin`: the low-pulled pin read to determine if the treatement coil is connected
+        """
         super().__init__()
 
+        self._device_connected_pin = device_connected_pin
         self._device_enabled = False
         self._remaining_time = 0
 
@@ -28,6 +35,13 @@ class SessionState:
         """
 
         self._remaining_time = sec
+
+    def connected(self) -> bool:
+        """
+        Returns if the treatment coil is connected (`True` if connected, else `False`)
+        """
+
+        return self._device_connected_pin.value() == 1
 
     def device_enabled(self) -> bool:
         """
