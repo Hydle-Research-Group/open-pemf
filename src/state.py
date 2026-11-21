@@ -16,7 +16,17 @@ class SessionState:
 
         self._device_connected_pin = device_connected_pin
         self._device_enabled = False
-        self._remaining_time = 0
+        self._duration = 0
+        self._current_time = 0
+
+    def reset(self):
+        """
+        Reset the session state.
+        """
+
+        self._device_enabled = False
+        self._duration = 0
+        self._current_time = 0
 
     def set_device_enabled(self, enabled: bool):
         """
@@ -27,14 +37,24 @@ class SessionState:
 
         self._device_enabled = enabled
 
-    def set_remaining_time(self, sec: int):
+    def set_duration(self, sec: int):
         """
-        Set the session time (in seconds)
+        Set the session's duration (in seconds)
+
+        - `sec`: the duration in seconds
+        """
+
+        self._duration = sec
+        self._current_time = sec
+
+    def set_current_time(self, sec: int):
+        """
+        Set the session's current time (in seconds)
 
         - `sec`: the time in seconds
         """
 
-        self._remaining_time = sec
+        self._current_time = sec
 
     def connected(self) -> bool:
         """
@@ -50,9 +70,16 @@ class SessionState:
 
         return self._device_enabled
 
-    def remaining_time(self) -> int:
+    def duration(self) -> int:
         """
-        Returns the remaining time of the session (in seconds)
+        Returns the duration of the session (in seconds)
         """
 
-        return self._remaining_time
+        return self._duration
+
+    def current_time(self) -> int:
+        """
+        Returns the current time of the session (in seconds)
+        """
+
+        return self._current_time

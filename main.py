@@ -26,11 +26,11 @@ def start_session(app: Application, session_ui: Screen):
     level = session_level_control.value()
 
     if level == 1:
-        SESSION_STATE.set_remaining_time(5 * 60)
+        SESSION_STATE.set_duration(5 * 60)
     elif level == 2:
-        SESSION_STATE.set_remaining_time(15 * 60)
+        SESSION_STATE.set_duration(15 * 60)
     else:
-        SESSION_STATE.set_remaining_time(20 * 60)
+        SESSION_STATE.set_duration(20 * 60)
 
     app.set_active_screen(session_ui)
 
@@ -53,15 +53,15 @@ async def session_timer_task():
     """
 
     while True:
-        if SESSION_STATE.remaining_time() > 0:
-            remaining = SESSION_STATE.remaining_time() - 1
+        if SESSION_STATE.current_time() > 0:
+            remaining = SESSION_STATE.current_time() - 1
             remaining_label.set_text(
                 f"{int(remaining / 60):02}:{remaining % 60:02} Remaining"
             )
 
             await asyncio.sleep(1)
 
-            SESSION_STATE.set_remaining_time(remaining)
+            SESSION_STATE.set_current_time(remaining)
         else:
             await asyncio.sleep_ms(10)
 
@@ -86,13 +86,19 @@ async def session_task():
         if (
             SESSION_STATE.device_enabled()
             and SESSION_STATE.connected()
-            and SESSION_STATE.remaining_time() > 0
+            and SESSION_STATE.current_time() > 0
         ):
             en_pin.off()  # enable the driver
 
-            config = tmc_ix(
-                16, int((SESSION_STATE.remaining_time() / 60) * 1.6) - 1, 16
+            # configure the TMC2209's current for this range of time
+            minutes_normalized = 20 - (
+                SESSION_STATE.duration() / 60 - SESSION_STATE.current_time() / 60
             )
+            current_adj = (
+                32 if minutes_normalized < 4 else round(32 / (minutes_normalized - 3))
+            ) - 1
+
+            config = tmc_ix(16, current_adj, 16)
             tmc_write_register(
                 tmc2209_uart, address=TMC2209_ADDRESS, register=0x10, value=config
             )
@@ -145,7 +151,7 @@ async def main():
 
             continue  # freeze in a busy loop until the device is plugged in
 
-        if SESSION_STATE.remaining_time() == 0:
+        if SESSION_STATE.current_time() == 0:
             app.set_active_screen(session_config_ui)
 
         # the ui is redrawn every 1ms (1000Hz)
