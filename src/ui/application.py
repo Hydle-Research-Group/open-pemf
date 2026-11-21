@@ -1,3 +1,5 @@
+import time
+
 from machine import I2C, Pin
 
 from src.ui.screen import Screen
@@ -82,6 +84,8 @@ class Application:
         self._display.init_display()
         self._display.flip()
 
+        self._last_encoder_click = 0
+
     def set_active_screen(self, screen: Screen):
         """
         Set the active screen.
@@ -95,6 +99,13 @@ class Application:
         """
         The rotary encoder was pressed.
         """
+
+        now = time.ticks_ms()
+
+        if time.ticks_diff(now, self._last_encoder_click) < 200:
+            return
+
+        self._last_encoder_click = now
 
         if self._active_screen:
             self._active_screen.clicked()
