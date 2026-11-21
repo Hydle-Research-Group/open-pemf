@@ -16,52 +16,53 @@ session_level_control = IntegerAdjuster(1, text="Level", min=1, max=3)
 remaining_label = Label("")
 
 
-def start_session(app: Application, session_ui: Screen):
+def start_session(app: Application, session_ui: Screen, state: SessionState):
     """
     Start a session, enabling the device and swapping the active screen to the "Session" UI.
     """
 
-    SESSION_STATE.set_device_enabled(True)
+    state.set_device_enabled(True)
 
     level = session_level_control.value()
 
     if level == 1:
-        SESSION_STATE.set_duration(5 * 60)
+        state.set_duration(5 * 60)
     elif level == 2:
-        SESSION_STATE.set_duration(15 * 60)
+        state.set_duration(15 * 60)
     else:
-        SESSION_STATE.set_duration(20 * 60)
+        state.set_duration(20 * 60)
 
     app.set_active_screen(session_ui)
 
 
-def stop_session(app: Application, default: Screen):
+def stop_session(state: SessionState):
     """
     Stop a session, disabling the device and swapping the screen back to `default`.
     """
 
-    SESSION_STATE.set_device_enabled(False)
-
-    app.set_active_screen(default)
+    state.reset()
 
 
 async def session_timer_task():
     """
     The session timer task.
 
-    This task decrements `SESSION_STATE`'s remaining time by 1 every second, editing a global `remaining_label` to display the current time.
+    This task decrements SESSION_STATE's remaining time by 1 every second,
+    editing a global remaining_label to display the current time.
     """
 
     while True:
-        if SESSION_STATE.current_time() > 0:
-            remaining = SESSION_STATE.current_time() - 1
+        current = SESSION_STATE.current_time()
+
+        if current > 0:
+            remaining = current - 1
+            SESSION_STATE.set_current_time(remaining)
+
             remaining_label.set_text(
                 f"{int(remaining / 60):02}:{remaining % 60:02} Remaining"
             )
 
             await asyncio.sleep(1)
-
-            SESSION_STATE.set_current_time(remaining)
         else:
             await asyncio.sleep_ms(10)
 
@@ -131,11 +132,14 @@ async def main():
 
     session_config_ui.add_widget(session_level_control)
     session_config_ui.add_widget(
-        Button("Start Session", callback=lambda: start_session(app, session_ui))
+        Button(
+            "Start Session",
+            callback=lambda: start_session(app, session_ui, SESSION_STATE),
+        )
     )
     session_ui.add_widget(remaining_label)
     session_ui.add_widget(
-        Button("Stop Session", callback=lambda: stop_session(app, session_config_ui))
+        Button("Stop Session", callback=lambda: stop_session(SESSION_STATE))
     )
     error_ui.add_widget(Label("Connect device"))
     error_ui.add_widget(Label("to begin"))
