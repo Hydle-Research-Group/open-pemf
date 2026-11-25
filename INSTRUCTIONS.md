@@ -8,12 +8,12 @@ You can source the required components from the [official source list](https://d
 
 You will also need to produce a custom PCB. We provided instructions for that [here](https://github.com/Hydle-Research-Group/manufacturing/blob/main/processes/P000002-R1).
 
-The following tools and items are highly recommended to complete this project:
+### Other Requirements:
 
 - Capable 3D printer with PETG filament
 - Soldering iron station
 - Hex socket set
+- Zip ties (small to medium)
 - Snips (or other form of cutting tool)
 - Wire stripper 
 - Wire crimper
-- Heat shrink tubing

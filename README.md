@@ -13,17 +13,17 @@ Whilst the effects of [PEMF therapy](https://my.clevelandclinic.org/health/treat
 
 ## How It Works
 
-At its core, OpenPEMF uses a coil of wire, and a pulse generator. This setup can create a changing (pulsed) electromagnetic field, just by running current through the coil via the pulse generator. The device runs on 12V DC with a peak current of ~2A.
+At its core, OpenPEMF uses a coil of wire and a pulse generator. This setup creates a changing electromagnetic field, simply by running current through the coil via the pulse generator. The device runs on 12V DC with a peak current of ~2A.
 
-The pulse generator we chose is a repurposed [TMC2209 stepper motor driver](https://global.bttwiki.com/TMC2209.html). The TMC2209 outputs two sinusoidal-like waves, phase A and phase B. One phase is offset by 60° depending on the configuration.
+The pulse generator we chose is a repurposed [TMC2209 stepper motor driver](https://global.bttwiki.com/TMC2209.html). The TMC2209 outputs two sinusoidal-like waves (two phases), with one phase offset by 60° depending on the configuration. The actual "treatment applicator" is a handheld plastic assembly. Inside are the two phases of wire, wound in a coil with a diameter of 10cm.
 
-The BEMER Group [describes using a special waveform](https://patents.google.com/patent/US8808159B2/en) for stimulating "autoregulatory mechanisms in the organism". This requires modifying the strength of the magnetic field, which is dependent on current:
+The BEMER Group [describes using a special waveform](https://patents.google.com/patent/US8808159B2/en) for stimulating "autoregulatory mechanisms in the organism". This requires modifying the strength of the magnetic field, which is dependent on current and the number of turns per unit length:
 
 $$
 B = \mu_0 n I
 $$
 
-The primary concern is that researchers don't know if this special waveform is *actually doing anything* to assist in pain relief. [A study that used both fake and real PEMF therapy](https://pmc.ncbi.nlm.nih.gov/articles/PMC2670735/#ack1) showed that using low-frequency magnetic fields on patients with musculoskeletal chronic pain yielded results indicating a slight healing effect.
+One concern is that researchers don't know if a special waveform is *required* to stimulate tissue, muscles, or blood flow. [A study that used both fake and real PEMF therapy](https://pmc.ncbi.nlm.nih.gov/articles/PMC2670735/#ack1) showed that using low-frequency magnetic fields on patients with musculoskeletal chronic pain yielded results indicating a slight healing effect.
 
 The BEMER group specifies on their website that the device runs at ~30Hz with variable intensities. From what we've determined, the frequency and intensity of the magnetic field both matter, **but not significantly enough** to determine a special "biometric" waveform. For that reason, we designed a 30Hz exponentially-growing waveform for OpenPEMF:
 
@@ -35,11 +35,9 @@ f(t) =
 \end{cases}
 $$
 
-*Where `t` is time and `f(t)` is the waveform current values for the TMC2209.*
+*Where `t` is time in minutes (counted down by the device) and `f(t)` is the current value for the TMC2209.*
 
-Since the TMC2209 already generates the sine wave, a micro controller (Raspberry Pi Pico) can simply send 30Hz pulses to the STEP pin, and configure the driver's current with time. 
-
-*Both phases of the TMC2209 are wired to two separate coils, as the BEMER device also uses multiple phases.*
+Since the TMC2209 already generates the sine wave, a micro controller (Raspberry Pi Pico) can send 30Hz pulses to the STEP pin, and configure the driver's current with time with UART communication. 
 
 The OpenPEMF firmware is designed to have 3 levels a user can "session" with. All levels use the same waveform, meaning the only thing that changes is the time.
 
@@ -47,13 +45,13 @@ The OpenPEMF firmware is designed to have 3 levels a user can "session" with. Al
 - Level 2 lasts 15 minutes and reaches medium intensity.
 - Level 3 lasts 20 minutes and reaches the highest intensity.
 
-The actual treatment applicator is a handheld plastic assembly. Inside are the two phases of wire, wound in a coil, with a diameter of 10cm. 
+With all of this in mind, it should be known that the OpenPEMF unit and other PEMF devices do **NOT** generate ionizing radiation. The device frequency is well below that of radio waves.  
 
 ## Usage
 
-**Ensure the treatment applicator is plugged in.** The device will display `Connect device to begin` until the applicator is connected. 
+Power on the device by plugging the 12V DC (2A) power supply into the jack near the back of the device.
 
-You will likely need to configure the level, picking it depending on the pain you are feeling. 
+Once the device is on, you will likely need to configure the level. Pick a level depending on the pain you are feeling:
 
 - Level 1 lasts 5 minutes and is low intensity. *For little to no pain*
 - Level 2 lasts 15 minutes and reaches medium intensity. *For medium pain, i.e. a bruise*
