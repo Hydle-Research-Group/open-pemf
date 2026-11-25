@@ -1,2 +1,4 @@
 /target
 *.FCBak
+*.sc.lock
+*.sc.bak
