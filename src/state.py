@@ -18,6 +18,7 @@ class SessionState:
         self._device_enabled = False
         self._duration = 0
         self._current_time = 0
+        self._frequency = 60
 
     def reset(self):
         """
@@ -56,6 +57,15 @@ class SessionState:
 
         self._current_time = sec
 
+    def set_frequency(self, freq: int):
+        """
+        Set the session frequency (in hertz)
+
+        - `freq`: the frequency in hertz
+        """
+
+        self._frequency = freq
+
     def connected(self) -> bool:
         """
         Returns if the treatment coil is connected (`True` if connected, else `False`)
@@ -83,3 +93,10 @@ class SessionState:
         """
 
         return self._current_time
+
+    def frequency(self) -> int:
+        """
+        Returns the frequency of the session (in hertz)
+        """
+
+        return self._frequency

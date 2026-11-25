@@ -13,6 +13,7 @@ TMC2209_ADDRESS = 0x00
 
 # ui widgets
 session_level_control = IntegerAdjuster(1, text="Level", min=1, max=3)
+session_frequency_control = IntegerAdjuster(60, text="Frequency (Hz)", min=1, max=1000)
 remaining_label = Label("")
 
 
@@ -24,6 +25,7 @@ def start_session(app: Application, session_ui: Screen, state: SessionState):
     state.set_device_enabled(True)
 
     level = session_level_control.value()
+    frequency = session_frequency_control.value()
 
     if level == 1:
         state.set_duration(5 * 60)
@@ -31,6 +33,8 @@ def start_session(app: Application, session_ui: Screen, state: SessionState):
         state.set_duration(15 * 60)
     else:
         state.set_duration(20 * 60)
+
+    state.set_frequency(frequency)
 
     app.set_active_screen(session_ui)
 
@@ -71,9 +75,9 @@ async def session_task():
     """
     The session task.
 
-    This task sends 30Hz pulses to the on-board TMC2209 driver, ensuring the device is properly connected and enabled before doing so.
+    This task sends pulses to the on-board TMC2209 driver, ensuring the device is properly connected and enabled before doing so.
 
-    Additionally, the task controls the IRUN current value of the TMC2209, matching a linear relationship with elapsed time.
+    Additionally, the task controls the IRUN current value of the TMC2209, matching a exponential relationship with elapsed time.
     """
 
     en_pin = Pin(17, Pin.OUT, value=1)
@@ -105,7 +109,7 @@ async def session_task():
             )
 
             step_pin.on()
-            await asyncio.sleep_ms(33)
+            await asyncio.sleep_ms(round(1000 / SESSION_STATE.frequency()))
             step_pin.off()
         else:
             en_pin.on()  # disable the driver
@@ -131,6 +135,7 @@ async def main():
     error_ui = Screen(scrollable=False)
 
     session_config_ui.add_widget(session_level_control)
+    session_config_ui.add_widget(session_frequency_control)
     session_config_ui.add_widget(
         Button(
             "Start Session",

@@ -25,19 +25,19 @@ $$
 
 One concern is that researchers don't know if a special waveform is *required* to stimulate tissue, muscles, or blood flow. [A study that used both fake and real PEMF therapy](https://pmc.ncbi.nlm.nih.gov/articles/PMC2670735/#ack1) showed that using low-frequency magnetic fields on patients with musculoskeletal chronic pain yielded results indicating a slight healing effect.
 
-The BEMER group specifies on their website that the device runs at ~30Hz with variable intensities. From what we've determined, the frequency and intensity of the magnetic field both matter, **but not significantly enough** to determine a special "biometric" waveform. For that reason, we designed a 30Hz exponentially-growing waveform for OpenPEMF:
+The BEMER group specifies on their website that the device runs at ~30Hz with variable intensities. From what we've determined, the frequency and intensity of the magnetic field both matter, **but not significantly enough** to determine a special "biometric" waveform. For that reason, we designed a variable-frequency exponentially-growing waveform for OpenPEMF:
 
 $$
-f(t) =
+I_{TMC}(t) =
 \begin{cases}
-32 \cdot \sin(30t), & t < 4 \\
-\dfrac{32}{t - 3} \cdot \sin(30t), & t \leq 20
+32 \cdot \sin(ft), & t < 4 \\
+\dfrac{32}{t - 3} \cdot \sin(ft), & t \leq 20
 \end{cases}
 $$
 
-*Where `t` is time in minutes (counted down by the device) and `f(t)` is the current value for the TMC2209.*
+*Where `t` is time in minutes (counted down by the device) and `f` is the frequency in Hertz.* 
 
-Since the TMC2209 already generates the sine wave, a micro controller (Raspberry Pi Pico) can send 30Hz pulses to the STEP pin, and configure the driver's current with time with UART communication. 
+Since the TMC2209 already generates the sine wave, a micro controller (Raspberry Pi Pico) can send user-defined pulses to the STEP pin, and configure the driver's current with time via UART communication. 
 
 The OpenPEMF firmware is designed to have 3 levels a user can "session" with. All levels use the same waveform, meaning the only thing that changes is the time.
 
@@ -45,7 +45,9 @@ The OpenPEMF firmware is designed to have 3 levels a user can "session" with. Al
 - Level 2 lasts 15 minutes and reaches medium intensity.
 - Level 3 lasts 20 minutes and reaches the highest intensity.
 
-With all of this in mind, it should be known that the OpenPEMF unit and other PEMF devices do **NOT** generate ionizing radiation. The device frequency is well below that of radio waves.  
+The firmware also allows the session frequency to be changed. Users can pick between 1 up to 1000Hz (1kHz). By default, the frequency of a session is set to 60Hz.
+
+With all of this in mind, it should be known that the OpenPEMF unit and other PEMF devices do **NOT** generate ionizing radiation. The device frequency is well below that of radio waves, and is technically considered low-frequency.  
 
 ## Usage
 
