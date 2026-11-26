@@ -97,10 +97,11 @@ class Screen:
             if isinstance(widget, (Label, Button)):
                 display.text(widget.text(), x, y_spacing)
             elif isinstance(widget, IntegerAdjuster):
-                text = widget.text()
+                prefix = widget.prefix()
+                suffix = widget.suffix()
 
-                # if the text is not empty, draw the field after the text
-                if text:
-                    display.text(f"{text}: {widget.value()}", x, y_spacing)
+                # if the prefix is not empty, draw the field after the it
+                if prefix:
+                    display.text(f"{prefix}: {widget.value()}{suffix}", x, y_spacing)
                 else:
-                    display.text(str(widget.value()), x, y_spacing)
+                    display.text(f"{widget.value()}{suffix}", x, y_spacing)

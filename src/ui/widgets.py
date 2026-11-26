@@ -118,7 +118,8 @@ class IntegerAdjuster(Widget):
     def __init__(
         self,
         value: int,
-        text: str = "",
+        prefix: str = "",
+        suffix: str = "",
         increment: int = 1,
         min: int = 0,
         max: int = 1000000,
@@ -128,7 +129,8 @@ class IntegerAdjuster(Widget):
         Construct a new `IntegerAdjuster` object.
 
         - `value`: the initial value
-        - `text`: the text to display before the internal value
+        - `prefix`: the text to display before the internal value
+        - `suffix`: the text to display after the internal value
         - `increment`: the increment amount (this determines is how much is added/subtracted when values are changed)
         - `min`: the minimum amount (never exceeded)
         - `max`: the maximum amount (never exceeded)
@@ -137,7 +139,8 @@ class IntegerAdjuster(Widget):
         super().__init__()
 
         self._value = value
-        self._text = text
+        self._prefix = prefix
+        self._suffix = suffix
         self._increment = increment
         self._min = min
         self._max = max
@@ -168,9 +171,16 @@ class IntegerAdjuster(Widget):
 
         return self._value
 
-    def text(self) -> str:
+    def prefix(self) -> str:
         """
-        Returns the text of the integer adjuster.
+        Returns the prefix text of the integer adjuster.
         """
 
-        return self._text
+        return self._prefix
+
+    def suffix(self) -> str:
+        """
+        Returns the suffix text of the integer adjuster.
+        """
+
+        return self._suffix

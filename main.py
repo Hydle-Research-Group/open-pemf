@@ -12,8 +12,10 @@ SESSION_STATE = SessionState(Pin(16, Pin.IN, Pin.PULL_DOWN))
 TMC2209_ADDRESS = 0x00
 
 # ui widgets
-session_level_control = IntegerAdjuster(1, text="Level", min=1, max=3)
-session_frequency_control = IntegerAdjuster(60, text="Frequency (Hz)", min=1, max=1000)
+session_level_control = IntegerAdjuster(1, prefix="Level", min=1, max=3)
+session_frequency_control = IntegerAdjuster(
+    60, prefix="Freq", suffix="Hz", min=10, max=1000, increment=10
+)
 remaining_label = Label("")
 
 
