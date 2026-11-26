@@ -88,11 +88,7 @@ async def session_task():
     tmc2209_uart = UART(1, baudrate=115200, tx=Pin(20), rx=Pin(21))
 
     while True:
-        if (
-            SESSION_STATE.device_enabled()
-            and SESSION_STATE.connected()
-            and SESSION_STATE.current_time() > 0
-        ):
+        if SESSION_STATE.device_enabled() and SESSION_STATE.current_time() > 0:
             en_pin.off()  # enable the driver
 
             # configure the TMC2209's current for this range of time
@@ -132,7 +128,6 @@ async def main():
 
     session_config_ui = Screen()
     session_ui = Screen()
-    error_ui = Screen(scrollable=False)
 
     session_config_ui.add_widget(session_level_control)
     session_config_ui.add_widget(session_frequency_control)
@@ -146,19 +141,12 @@ async def main():
     session_ui.add_widget(
         Button("Stop Session", callback=lambda: stop_session(SESSION_STATE))
     )
-    error_ui.add_widget(Label("Connect device"))
-    error_ui.add_widget(Label("to begin"))
 
     asyncio.create_task(session_timer_task())
     asyncio.create_task(session_task())
 
     while True:
         app.update()
-
-        if not SESSION_STATE.connected():
-            app.set_active_screen(error_ui)
-
-            continue  # freeze in a busy loop until the device is plugged in
 
         if SESSION_STATE.current_time() == 0:
             app.set_active_screen(session_config_ui)
